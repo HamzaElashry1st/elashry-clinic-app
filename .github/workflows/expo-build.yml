@@ -1,0 +1,39 @@
+name: Expo Android Build
+
+on:
+  push:
+    branches:
+      - main # or your default branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x # Use a compatible Node.js version
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Expo CLI
+        run: npm install -g expo-cli
+
+      - name: Login to Expo
+        run: expo login -p YOUR_EXPO_ACCESS_TOKEN # Replace with your GitHub Secret name
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }} # This is the GitHub Secret
+
+      - name: Build Android APK
+        run: expo build:android --type apk --non-interactive
+        
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: *.apk # Adjust if your APK has a different naming convention
