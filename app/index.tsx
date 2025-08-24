@@ -1,7 +1,6 @@
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, LogBox, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const firebaseConfig = {
@@ -33,8 +32,12 @@ interface Patient {
   specialty: string;
 }
 
+interface HomeScreenProps {
+  navigateTo: (screen: ScreenName) => void;
+}
+
 interface BookingScreenProps {
-  // navigateTo: (screen: ScreenName) => void;
+  navigateTo: (screen: ScreenName) => void;
   patientName: string;
   setPatientName: (name: string) => void;
   patientSpecialty: string;
@@ -43,14 +46,13 @@ interface BookingScreenProps {
 }
 
 interface CasesScreenProps {
-  // navigateTo: (screen: ScreenName) => void;
+  navigateTo: (screen: ScreenName) => void;
   patientIdToRemove: string;
   setPatientIdToRemove: (id: string) => void;
   patientsData: Patient[];
   removePatient: () => void;
   fetchPatients: () => void;
 }
-
 
 const HomeScreen = ({ navigateTo }: HomeScreenProps) => {
   return (
@@ -80,6 +82,7 @@ const HomeScreen = ({ navigateTo }: HomeScreenProps) => {
 };
 
 const BookingScreen = ({ navigateTo, patientName, setPatientName, patientSpecialty, setPatientSpecialty, addPatient }: BookingScreenProps) => {
+  console.log('BookingScreen rendered');
   return (
     <View style={[styles.screenContainer, { width }]}>
       <TextInput
@@ -114,7 +117,9 @@ const BookingScreen = ({ navigateTo, patientName, setPatientName, patientSpecial
 };
 
 const CasesScreen = ({ navigateTo, patientIdToRemove, setPatientIdToRemove, patientsData, removePatient, fetchPatients }: CasesScreenProps) => {
+  console.log('CasesScreen rendered');
   useEffect(() => {
+    console.log('CasesScreen useEffect: Calling fetchPatients');
     fetchPatients();
   }, []); // Fetch patients when the component mounts
 
@@ -204,6 +209,7 @@ export default function App() {
   };
 
   const addPatient = () => {
+    console.log('addPatient called');
     if (patientName && patientSpecialty) {
       const now = new Date();
       const startOfYear = new Date(now.getFullYear(), 0, 0);
@@ -216,12 +222,14 @@ export default function App() {
         specialty: patientSpecialty,
       })
         .then(() => {
+          console.log('Patient added successfully!');
           alert('Patient added successfully!');
           setPatientName('');
           setPatientSpecialty('');
           navigateTo('home');
         })
         .catch((error) => {
+          console.error('Error adding patient:', error.message);
           alert('Error adding patient: ' + error.message);
         });
     } else {
@@ -230,6 +238,7 @@ export default function App() {
   };
 
   const fetchPatients = () => {
+    console.log('fetchPatients called');
     database.ref('/patients').once('value')
       .then((snapshot) => {
         const patients = snapshot.val();
@@ -240,25 +249,31 @@ export default function App() {
           });
           patientList.sort((a, b) => b.id.localeCompare(a.id)); // Sort by ID descending
         } else {
+          console.log('No patients found.');
           // Handle case where no patients are found, perhaps set an empty array or a message state
         }
         setPatientsData(patientList);
+        console.log('Patients fetched successfully:', patientList);
       })
       .catch((error) => {
+        console.error('Error fetching patients:', error.message);
         alert('Error fetching patients: ' + error.message);
         setPatientsData([]);
       });
   };
 
   const removePatient = () => {
+    console.log('removePatient called');
     if (patientIdToRemove) {
       database.ref('/patients/' + patientIdToRemove).remove()
         .then(() => {
+          console.log('Patient removed successfully!');
           alert('Patient removed successfully!');
           setPatientIdToRemove('');
           fetchPatients(); // Refresh the list after removal
         })
         .catch((error) => {
+          console.error('Error removing patient:', error.message);
           alert('Error removing patient: ' + error.message);
         });
     } else {
