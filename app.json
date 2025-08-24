@@ -2,7 +2,7 @@
   "expo": {
     "name": "elashry-clinic",
     "slug": "elashry-clinic",
-    "version": "1.0.0",
+    "displayName": "Elashry Clinic",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "elashryclinic",

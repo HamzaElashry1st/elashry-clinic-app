@@ -1,6 +1,7 @@
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
-import React, { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { Animated, Dimensions, LogBox, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const firebaseConfig = {
@@ -32,12 +33,8 @@ interface Patient {
   specialty: string;
 }
 
-interface HomeScreenProps {
-  navigateTo: (screen: ScreenName) => void;
-}
-
 interface BookingScreenProps {
-  navigateTo: (screen: ScreenName) => void;
+  // navigateTo: (screen: ScreenName) => void;
   patientName: string;
   setPatientName: (name: string) => void;
   patientSpecialty: string;
@@ -46,13 +43,14 @@ interface BookingScreenProps {
 }
 
 interface CasesScreenProps {
-  navigateTo: (screen: ScreenName) => void;
+  // navigateTo: (screen: ScreenName) => void;
   patientIdToRemove: string;
   setPatientIdToRemove: (id: string) => void;
   patientsData: Patient[];
   removePatient: () => void;
   fetchPatients: () => void;
 }
+
 
 const HomeScreen = ({ navigateTo }: HomeScreenProps) => {
   return (
