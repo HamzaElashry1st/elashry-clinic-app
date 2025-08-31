@@ -60,7 +60,7 @@ export default function CasesScreen() {
       database.ref('/patients/' + patientId).remove()
         .then(() => {
           console.log('Patient removed successfully!');
-          Alert.alert('Success', 'Patient removed successfully!');
+          Alert.alert('Success', 'Patient removed successfully from the list!');
           fetchPatients(); // Refresh the list after removal
         })
         .catch((error) => {
