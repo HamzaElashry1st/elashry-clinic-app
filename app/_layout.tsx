@@ -1,25 +1,14 @@
-import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
-
-SplashScreen.preventAutoHideAsync();
+import { Stack } from 'expo-router';
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    'ArefRuqaa-Regular': require('../assets/fonts/ArefRuqaa-Regular.ttf'),
-  });
-
-  useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, error]);
-
-  if (!loaded && !error) {
-    return null;
-  }
-
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{
+      headerShown: false,
+      animation: 'slide_from_right',
+    }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="booking" />
+      <Stack.Screen name="cases" />
+    </Stack>
+  );
 }
-
