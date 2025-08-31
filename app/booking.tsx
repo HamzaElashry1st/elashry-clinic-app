@@ -1,8 +1,8 @@
+import { useRouter } from 'expo-router';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 // Initialize Firebase (if not already initialized)
 const firebaseConfig = {
@@ -44,7 +44,7 @@ export default function BookingScreen() {
           Alert.alert('Success', 'Patient added successfully!');
           setPatientName('');
           setPatientSpecialty('');
-          router.push('/'); // Navigate back to home
+          router.push('/');
         })
         .catch((error) => {
           console.error('Error adding patient:', error.message);
@@ -60,12 +60,14 @@ export default function BookingScreen() {
       <TextInput
         style={styles.input}
         placeholder="اسم الحالة"
+        placeholderTextColor="#333333"
         value={patientName}
         onChangeText={setPatientName}
       />
       <TextInput
         style={styles.input}
         placeholder="التخصص"
+        placeholderTextColor="#333333"
         value={patientSpecialty}
         onChangeText={setPatientSpecialty}
       />

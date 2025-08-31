@@ -46,6 +46,7 @@ const styles = StyleSheet.create({
     fontSize: 60,
     marginBottom: 40,
     fontFamily: 'ArefRuqaa-Regular',
+    textAlign: 'center', // Added to center the title
   },
   buttonContainer: {
     width: 170,

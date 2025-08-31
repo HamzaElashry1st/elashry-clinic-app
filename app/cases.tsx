@@ -1,10 +1,9 @@
+import { useRouter } from 'expo-router';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// Initialize Firebase (if not already initialized)
 const firebaseConfig = {
   apiKey: "AIzaSyB1bm_0TI5WytMlmP3IfZM1zhqDpvLBPn4",
   authDomain: "elashryclinic-22e84.firebaseapp.com",
@@ -29,7 +28,6 @@ interface Patient {
 
 export default function CasesScreen() {
   const router = useRouter();
-  const [patientIdToRemove, setPatientIdToRemove] = useState('');
   const [patientsData, setPatientsData] = useState<Patient[]>([]);
 
   const fetchPatients = () => {
@@ -56,14 +54,13 @@ export default function CasesScreen() {
       });
   };
 
-  const removePatient = () => {
-    console.log('removePatient called');
-    if (patientIdToRemove) {
-      database.ref('/patients/' + patientIdToRemove).remove()
+  const removePatient = (patientId: string) => {
+    console.log('removePatient called with ID:', patientId);
+    if (patientId) {
+      database.ref('/patients/' + patientId).remove()
         .then(() => {
           console.log('Patient removed successfully!');
           Alert.alert('Success', 'Patient removed successfully!');
-          setPatientIdToRemove('');
           fetchPatients(); // Refresh the list after removal
         })
         .catch((error) => {
@@ -71,7 +68,7 @@ export default function CasesScreen() {
           Alert.alert('Error', 'Error removing patient: ' + error.message);
         });
     } else {
-      Alert.alert('Error', 'Please enter a patient ID to remove.');
+      Alert.alert('Error', 'Patient ID is missing.');
     }
   };
 
@@ -81,12 +78,6 @@ export default function CasesScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screenContainer}>
-      <TextInput
-        style={styles.input}
-        placeholder="أدخل معرف المريض"
-        value={String(patientIdToRemove || '')}
-        onChangeText={setPatientIdToRemove}
-      />
       {patientsData.length > 0 ? (
         <View style={styles.table}>
           <View style={styles.tableRow}>
@@ -103,10 +94,7 @@ export default function CasesScreen() {
               <TouchableOpacity
                 activeOpacity={0.6}
                 style={[styles.button, styles.tableButton]}
-                onPress={() => {
-                  setPatientIdToRemove(patient.id);
-                  removePatient();
-                }}
+                onPress={() => removePatient(patient.id)}
               >
                 <Text style={styles.buttonText}>حذف</Text>
               </TouchableOpacity>
