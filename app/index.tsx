@@ -1,13 +1,13 @@
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { Alert, LogBox, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LogBox, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 LogBox.ignoreLogs([
   'Warning: Text strings must be rendered within a <Text> component.',
 ]);
 
 const ADMIN_PASSWORD = 'KeepAdministrator';
-const LONG_PRESS_DURATION = 10000;
+const LONG_PRESS_DURATION = 5000;
 
 export default function IndexPage() {
   const router = useRouter();
@@ -16,24 +16,9 @@ export default function IndexPage() {
 
   const handlePressIn = () => {
     longPressTimer.current = setTimeout(() => {
-      if (Platform.OS === 'web') { 
-        setTitleText('تعذر الحصول على الصفحة');
-       } else {
-        Alert.prompt(
-          'Password Required',
-          'Please enter the administrator password:',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'OK', onPress: (password) => {
-              if (password === ADMIN_PASSWORD) {
-                router.push({ pathname: '/cases_admin' });
-              } else {
-                Alert.alert('Error', 'Incorrect password.');
-              }
-            }},
-          ],
-          'secure-text'
-        );
+      if (true) { 
+        router.push({ pathname: '/cases_admin' });
+      } else {
       }
     }, LONG_PRESS_DURATION);
   };

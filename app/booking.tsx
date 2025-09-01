@@ -1,9 +1,9 @@
-import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DropDownPicker from 'react-native-dropdown-picker';
 
 const firebaseConfig = {
   apiKey: "AIzaSyB1bm_0TI5WytMlmP3IfZM1zhqDpvLBPn4",
@@ -21,7 +21,7 @@ if (!firebase.apps.length) {
 
 const database = firebase.database();
 
-const specialties = [
+const rawSpecialties = [
   'الأسنان',
   'الجلدية',
   'الأطفال',
@@ -31,14 +31,18 @@ const specialties = [
   'العلاج الطبيعي',
 ];
 
+const specialties = rawSpecialties.map(s => ({ label: s, value: s }));
+
 export default function BookingScreen() {
   const router = useRouter();
   const [patientName, setPatientName] = useState('');
-  const [patientSpecialty, setPatientSpecialty] = useState(specialties[0]);
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(specialties[0].value);
+  const [items, setItems] = useState(specialties);
 
   const addPatient = () => {
     console.log('addPatient called');
-    if (patientName && patientSpecialty) {
+    if (patientName && value) {
       const now = new Date();
       const startOfYear = new Date(now.getFullYear(), 0, 0);
       const timeSinceYearStartMilliseconds = now.getTime() - startOfYear.getTime();
@@ -48,14 +52,14 @@ export default function BookingScreen() {
       const newPatientRef = database.ref(`/patients/${patientId}`);
       newPatientRef.set({
         name: patientName,
-        specialty: patientSpecialty,
+        specialty: value,
         time: firebase.database.ServerValue.TIMESTAMP,
       })
         .then(() => {
           console.log('Patient added successfully!');
           Alert.alert('Success', 'Patient added successfully!');
           setPatientName('');
-          setPatientSpecialty(specialties[0]);
+          setValue(specialties[0].value);
           router.push('/');
         })
         .catch((error) => {
@@ -76,17 +80,23 @@ export default function BookingScreen() {
         value={patientName}
         onChangeText={setPatientName}
       />
-      <View style={styles.pickerContainer}> 
-        <Picker
-          selectedValue={patientSpecialty}
-          onValueChange={(itemValue) => setPatientSpecialty(itemValue)}
-          style={styles.picker}
-        >
-          {specialties.map((specialty, index) => (
-            <Picker.Item key={index} label={specialty} value={specialty} style={styles.pickerItem} />
-          ))}
-        </Picker>
-      </View>
+      <DropDownPicker
+        open={open}
+        value={value}
+        items={items}
+        setOpen={setOpen}
+        setValue={setValue}
+        setItems={setItems}
+        style={styles.dropdownPicker}
+        containerStyle={styles.dropdownContainer}
+        textStyle={styles.dropdownText}
+        labelStyle={styles.dropdownLabel}
+        dropDownContainerStyle={styles.dropdownMenuContainer}
+        selectedItemLabelStyle={styles.dropdownSelectedItemLabel}
+        placeholder="اختر التخصص"
+        zIndex={1000}
+        zIndexInverse={3000}
+      />
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           activeOpacity={0.6}
@@ -124,29 +134,42 @@ const styles = StyleSheet.create({
     fontSize: 36,
     backgroundColor: '#ffffff',
   },
-  pickerContainer: {
+  dropdownContainer: {
+    width: 200,
+    marginBottom: 20,
+    zIndex: 1000,
+  },
+  dropdownPicker: {
     borderColor: 'gray',
     borderWidth: 2,
-    marginBottom: 20,
     borderRadius: 10,
-    minWidth: 200,
     backgroundColor: '#ffffff',
-    height: 60,
-    justifyContent: 'center',
+    minHeight: 60,
     paddingHorizontal: 10,
   },
-  picker: {
-    width: '100%',
-    height: '100%',
+  dropdownText: {
     fontFamily: 'ArefRuqaa-Regular',
-    fontSize: 36,
+    fontSize: 20,
     color: '#333333',
-    borderColor: 'transparent',
+    textAlign: 'left',
+
   },
-  pickerItem: {
+  dropdownLabel: {
     fontFamily: 'ArefRuqaa-Regular',
-    fontSize: 36,
+    fontSize: 30,
     color: '#333333',
+    textAlign: 'left',
+  },
+  dropdownSelectedItemLabel: {
+    fontFamily: 'ArefRuqaa-Regular',
+    fontSize: 20,
+    color: '#333333',
+  },
+  dropdownMenuContainer: {
+    borderColor: 'gray',
+    borderWidth: 2,
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
   },
   buttonContainer: {
     width: 170,
