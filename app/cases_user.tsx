@@ -24,6 +24,7 @@ interface Patient {
   id: string;
   name: string;
   specialty: string;
+  time?: number; // Add time property
 }
 
 export default function CasesScreen() {
@@ -40,7 +41,8 @@ export default function CasesScreen() {
           Object.keys(patients).forEach(key => {
             patientList.push({ id: key, ...patients[key] });
           });
-          patientList.sort((a, b) => b.id.localeCompare(a.id)); // Sort by ID descending
+          // Sort by time ascending (oldest first)
+          patientList.sort((a, b) => (a.time || 0) - (b.time || 0));
         } else {
           console.log('No patients found.');
         }
@@ -54,24 +56,6 @@ export default function CasesScreen() {
       });
   };
 
-  const removePatient = (patientId: string) => {
-    console.log('removePatient called with ID:', patientId);
-    if (patientId) {
-      database.ref('/patients/' + patientId).remove()
-        .then(() => {
-          console.log('Patient removed successfully!');
-          Alert.alert('Success', 'Patient removed successfully from the list!');
-          fetchPatients(); // Refresh the list after removal
-        })
-        .catch((error) => {
-          console.error('Error removing patient:', error.message);
-          Alert.alert('Error', 'Error removing patient: ' + error.message);
-        });
-    } else {
-      Alert.alert('Error', 'Patient ID is missing.');
-    }
-  };
-
   useEffect(() => {
     fetchPatients();
   }, []);
@@ -81,28 +65,20 @@ export default function CasesScreen() {
       {patientsData.length > 0 ? (
         <View style={styles.table}>
           <View style={styles.tableRow}>
-            <Text style={styles.tableHeader}>المعرف</Text>
+            <Text style={styles.tableHeader}>الترتيب</Text>
             <Text style={styles.tableHeader}>الاسم</Text>
             <Text style={styles.tableHeader}>التخصص</Text>
-            <Text style={styles.tableHeader}></Text> {/* For the remove button */}
           </View>
-          {patientsData.map((patient: Patient) => (
+          {patientsData.map((patient: Patient, index: number) => (
             <View key={String(patient.id)} style={styles.tableRow}>
-              <Text style={styles.tableCell}>{String(patient.id)}</Text>
+              <Text style={styles.tableCell}>{index + 1}</Text>
               <Text style={styles.tableCell}>{String(patient.name || '')}</Text>
               <Text style={styles.tableCell}>{String(patient.specialty || '')}</Text>
-              <TouchableOpacity
-                activeOpacity={0.6}
-                style={[styles.button, styles.tableButton]}
-                onPress={() => removePatient(patient.id)}
-              >
-                <Text style={styles.buttonText}>حذف</Text>
-              </TouchableOpacity>
             </View>
           ))}
         </View>
       ) : (
-        <Text style={styles.tableCell}>لا يوجد مرضى.</Text>
+        <Text style={styles.noCasesText}>لا توجد حالات.</Text>
       )}
 
       <View style={styles.buttonContainer}>
@@ -178,6 +154,12 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     flex: 1,
+    padding: 10,
+    textAlign: 'center',
+    fontFamily: 'ArefRuqaa-Regular',
+  },
+  noCasesText: {
+    fontSize: 28,
     padding: 10,
     textAlign: 'center',
     fontFamily: 'ArefRuqaa-Regular',

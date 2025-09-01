@@ -1,10 +1,10 @@
+import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-// Initialize Firebase (if not already initialized)
 const firebaseConfig = {
   apiKey: "AIzaSyB1bm_0TI5WytMlmP3IfZM1zhqDpvLBPn4",
   authDomain: "elashryclinic-22e84.firebaseapp.com",
@@ -21,10 +21,20 @@ if (!firebase.apps.length) {
 
 const database = firebase.database();
 
+const specialties = [
+  'الأسنان',
+  'الجلدية',
+  'الأطفال',
+  'النساء والتوليد',
+  'الجراحة',
+  'الأنف والأذن والحنجرة',
+  'العلاج الطبيعي',
+];
+
 export default function BookingScreen() {
   const router = useRouter();
   const [patientName, setPatientName] = useState('');
-  const [patientSpecialty, setPatientSpecialty] = useState('');
+  const [patientSpecialty, setPatientSpecialty] = useState(specialties[0]);
 
   const addPatient = () => {
     console.log('addPatient called');
@@ -32,18 +42,20 @@ export default function BookingScreen() {
       const now = new Date();
       const startOfYear = new Date(now.getFullYear(), 0, 0);
       const timeSinceYearStartMilliseconds = now.getTime() - startOfYear.getTime();
-      const timeSinceYearStart = Math.round(timeSinceYearStartMilliseconds / 1000); // Convert milliseconds to seconds and round
+      const timeSinceYearStart = Math.round(timeSinceYearStartMilliseconds / 1000);
       const year = now.getFullYear();
-      const newPatientRef = database.ref(`/patients/${year}${timeSinceYearStart}`);
+      const patientId = `${year}${timeSinceYearStart}`;
+      const newPatientRef = database.ref(`/patients/${patientId}`);
       newPatientRef.set({
         name: patientName,
         specialty: patientSpecialty,
+        time: firebase.database.ServerValue.TIMESTAMP,
       })
         .then(() => {
           console.log('Patient added successfully!');
           Alert.alert('Success', 'Patient added successfully!');
           setPatientName('');
-          setPatientSpecialty('');
+          setPatientSpecialty(specialties[0]);
           router.push('/');
         })
         .catch((error) => {
@@ -51,7 +63,7 @@ export default function BookingScreen() {
           Alert.alert('Error', 'Error adding patient: ' + error.message);
         });
     } else {
-      Alert.alert('Error', 'Please enter patient name and specialty.');
+      Alert.alert('Error', 'Please enter patient name and select a specialty.');
     }
   };
 
@@ -64,13 +76,17 @@ export default function BookingScreen() {
         value={patientName}
         onChangeText={setPatientName}
       />
-      <TextInput
-        style={styles.input}
-        placeholder="التخصص"
-        placeholderTextColor="#333333"
-        value={patientSpecialty}
-        onChangeText={setPatientSpecialty}
-      />
+      <View style={styles.pickerContainer}> 
+        <Picker
+          selectedValue={patientSpecialty}
+          onValueChange={(itemValue) => setPatientSpecialty(itemValue)}
+          style={styles.picker}
+        >
+          {specialties.map((specialty, index) => (
+            <Picker.Item key={index} label={specialty} value={specialty} style={styles.pickerItem} />
+          ))}
+        </Picker>
+      </View>
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           activeOpacity={0.6}
@@ -106,6 +122,31 @@ const styles = StyleSheet.create({
     minWidth: 200,
     fontFamily: 'ArefRuqaa-Regular',
     fontSize: 36,
+    backgroundColor: '#ffffff',
+  },
+  pickerContainer: {
+    borderColor: 'gray',
+    borderWidth: 2,
+    marginBottom: 20,
+    borderRadius: 10,
+    minWidth: 200,
+    backgroundColor: '#ffffff',
+    height: 60,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  picker: {
+    width: '100%',
+    height: '100%',
+    fontFamily: 'ArefRuqaa-Regular',
+    fontSize: 36,
+    color: '#333333',
+    borderColor: 'transparent',
+  },
+  pickerItem: {
+    fontFamily: 'ArefRuqaa-Regular',
+    fontSize: 36,
+    color: '#333333',
   },
   buttonContainer: {
     width: 170,
@@ -128,5 +169,42 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontSize: 20,
+  },
+  table: {
+    minWidth: '100%',
+    borderWidth: 2,
+    borderColor: '#ccc',
+    marginBottom: 20,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 2,
+    borderColor: '#ccc',
+  },
+  tableHeader: {
+    flex: 1,
+    padding: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    backgroundColor: '#f2f2f2',
+    fontFamily: 'ArefRuqaa-Regular',
+  },
+  tableCell: {
+    flex: 1,
+    padding: 10,
+    textAlign: 'center',
+    fontFamily: 'ArefRuqaa-Regular',
+  },
+  noCasesText: {
+    fontSize: 28,
+    padding: 10,
+    textAlign: 'center',
+    fontFamily: 'ArefRuqaa-Regular',
+  },
+  tableButton: {
+    flex: 1,
+    backgroundColor: '#d93025',
+    paddingVertical: 5,
+    margin: 5,
   },
 });
