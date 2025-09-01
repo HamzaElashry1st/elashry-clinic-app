@@ -91,11 +91,12 @@ export default function BookingScreen() {
         containerStyle={styles.dropdownContainer}
         textStyle={styles.dropdownText}
         labelStyle={styles.dropdownLabel}
-        dropDownContainerStyle={styles.dropdownMenuContainer}
+        dropDownContainerStyle={[styles.dropdownMenuContainer, { maxHeight: 200 }]} // Added maxHeight
         selectedItemLabelStyle={styles.dropdownSelectedItemLabel}
         placeholder="اختر التخصص"
-        zIndex={1000}
-        zIndexInverse={3000}
+        zIndex={3000}
+        zIndexInverse={1000}
+        listMode="SCROLLVIEW" // Explicitly set listMode to SCROLLVIEW
       />
       <View style={styles.buttonContainer}>
         <TouchableOpacity
@@ -118,7 +119,7 @@ export default function BookingScreen() {
 
 const styles = StyleSheet.create({
   screenContainer: {
-    flexGrow: 1,
+    flex: 1, // Changed flexGrow to flex to ensure it takes up available space
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     width: 200,
     marginBottom: 20,
-    zIndex: 1000,
+    // Removed zIndex from here as it's now handled by the DropDownPicker prop
   },
   dropdownPicker: {
     borderColor: 'gray',
