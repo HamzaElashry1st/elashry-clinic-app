@@ -22,13 +22,12 @@ export default function IndexPage() {
       const password = window.prompt('Admin Password', 'Enter password to access admin page:');
       if (password === ADMIN_PASSWORD) {
         router.push({ pathname: '/cases_admin' });
-      } else if (password !== null) { // If password is null, it means the user cancelled the prompt
+      } else if (password !== null) {
         alert('Incorrect Password');
       }
-    } else { // Use custom modal for non-web platforms
+    } else {
       setIsPromptVisible(true);
     }
-    // waitTimer.current = null; // Removed this line to prevent premature clearing of the timer
   };
 
   const handlePromptConfirm = (password: string) => {
@@ -100,7 +99,7 @@ export default function IndexPage() {
           style={[styles.button, { backgroundColor: '#1a73e8', borderRadius: 10 } ]}
           onPress={() => router.push({ pathname: '/cases_user' })}
         >
-          <Text style={styles.buttonText}>الحالات</Text>
+          <Text style={styles.buttonText}>اعرف ترتيبك</Text>
         </TouchableOpacity>
       </View>
 
@@ -141,7 +140,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
+    fontFamily: 'ArefRuqaa-Regular',
     color: 'white',
-    fontSize: 20,
+    fontSize: 30,
   },
 });

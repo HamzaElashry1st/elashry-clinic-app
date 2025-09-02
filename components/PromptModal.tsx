@@ -44,6 +44,7 @@ const PromptModal: React.FC<PromptModalProps> = ({
             secureTextEntry={secureTextEntry}
             autoCapitalize="none"
             autoCorrect={false}
+            placeholderTextColor="#00008B"
           />
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.button} onPress={onCancel}>
@@ -95,6 +96,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingHorizontal: 10,
     marginBottom: 20,
+    color: '#00008B',
   },
   buttonContainer: {
     flexDirection: 'row',

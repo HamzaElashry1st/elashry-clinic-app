@@ -21,7 +21,7 @@ if (!firebase.apps.length) {
 
 const database = firebase.database();
 
-const rawSpecialties = [
+export const rawSpecialties = [
   'الأسنان',
   'الجلدية',
   'الأطفال',
@@ -192,7 +192,8 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 20,
+    fontSize: 30,
+    fontFamily: 'ArefRuqaa-Regular',
   },
   table: {
     minWidth: '100%',

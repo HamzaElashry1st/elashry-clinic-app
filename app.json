@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "elashry-clinic",
+    "name": "عيادات العشري",
     "slug": "elashry-clinic",
-    "displayName": "Elashry Clinic",
+    "displayName": "عيادات العشري",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "elashryclinic",
