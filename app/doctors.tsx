@@ -3,7 +3,6 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { rawSpecialties } from './booking'; // Import rawSpecialties
 
 const firebaseConfig = {
   apiKey: "AIzaSyB1bm_0TI5WytMlmP3IfZM1zhqDpvLBPn4",
@@ -21,92 +20,116 @@ if (!firebase.apps.length) {
 
 const database = firebase.database();
 
-interface Patient {
+interface Doctor {
   id: string;
   name: string;
+  value: string;
   specialty: string;
-  time?: number; // Add time property
 }
 
-export default function CasesScreen() {
-  const router = useRouter();
-  const [patientsData, setPatientsData] = useState<Patient[]>([]);
-  const [currentSpecialtyIndex, setCurrentSpecialtyIndex] = useState(0);
-  const currentSpecialty = rawSpecialties[currentSpecialtyIndex];
+interface Specialty {
+    id: string;
+    name: string;
+}
 
-  const fetchPatients = () => {
-    console.log('fetchPatients called for specialty:', currentSpecialty);
-    database.ref('/patients').once('value')
+export default function DoctorsScreen() {
+  const router = useRouter();
+  const [doctorsData, setDoctorsData] = useState<Doctor[]>([]);
+  const [currentSpecialtyIndex, setCurrentSpecialtyIndex] = useState(0);
+  const [specialtiesData, setSpecialtiesData] = useState<Specialty[]>([]);
+    const [specialties, setSpecialties] = useState<string[]>([]);
+  const currentSpecialty = specialties[currentSpecialtyIndex] || "جميع التخصصات";
+
+    useEffect(() => {
+        fetchSpecialties();
+    }, []);
+
+    const fetchSpecialties = () => {
+        database.ref('/specialties').once('value')
+            .then((snapshot) => {
+                const specialtiesData = snapshot.val() || {};
+                const loadedSpecialties: Specialty[] = Object.keys(specialtiesData).map(key => ({
+                    id: key,
+                    name: specialtiesData[key]
+                }));
+                setSpecialtiesData(loadedSpecialties);
+                const specialtyNames = loadedSpecialties.map(s => s.name);
+                setSpecialties([...specialtyNames, "جميع التخصصات"]);
+            })
+            .catch((error: any) => {
+                Alert.alert('Error', 'Error fetching specialties: ' + error.message);
+            });
+    };
+
+  const fetchDoctors = () => {
+    database.ref('/doctors').once('value')
       .then((snapshot) => {
-        const patients = snapshot.val();
-        let patientList: Patient[] = [];
-        if (patients) {
-          Object.keys(patients).forEach(key => {
-            patientList.push({ id: key, ...patients[key] });
+        const doctors = snapshot.val();
+        let doctorList: Doctor[] = [];
+        if (doctors) {
+          Object.keys(doctors).forEach(key => {
+            doctorList.push({ id: key, ...doctors[key] });
           });
-          // Filter by current specialty
-          const filteredPatients = patientList.filter(patient => patient.specialty === currentSpecialty);
-          // Sort by time ascending (oldest first)
-          filteredPatients.sort((a, b) => (a.time || 0) - (b.time || 0));
-          setPatientsData(filteredPatients);
-          console.log('Patients fetched successfully for', currentSpecialty, ':', filteredPatients);
+          setDoctorsData(doctorList);
         } else {
-          console.log('No patients found.');
-          setPatientsData([]);
+          setDoctorsData([]);
         }
       })
       .catch((error) => {
-        console.error('Error fetching patients:', error.message);
-        Alert.alert('Error', 'Error fetching patients: ' + error.message);
-        setPatientsData([]);
+        Alert.alert('Error', 'Error fetching doctors: ' + error.message);
+        setDoctorsData([]);
       });
   };
 
   useEffect(() => {
-    fetchPatients();
-  }, [currentSpecialtyIndex]); // Re-fetch patients when specialty changes
+    fetchDoctors();
+  }, []);
 
   const goToNextSpecialty = () => {
     setCurrentSpecialtyIndex((prevIndex) =>
-      (prevIndex + 1) % rawSpecialties.length
+      (prevIndex + 1) % specialties.length
     );
   };
 
   const goToPreviousSpecialty = () => {
     setCurrentSpecialtyIndex((prevIndex) =>
-      (prevIndex - 1 + rawSpecialties.length) % rawSpecialties.length
+      (prevIndex - 1 + specialties.length) % specialties.length
     );
   };
+
+  const filteredDoctors = currentSpecialty === 'جميع التخصصات'
+    ? doctorsData
+    : doctorsData.filter(doctor => doctor.specialty === currentSpecialty);
 
   return (
     <ScrollView contentContainerStyle={styles.screenContainer}>
       <View style={styles.specialtyBar}>
         <TouchableOpacity onPress={goToPreviousSpecialty} style={styles.arrowButton}>
-          <Text style={styles.arrowText}>{'<'}</Text>
+          <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={styles.specialtyText}>{currentSpecialty}</Text>
         <TouchableOpacity onPress={goToNextSpecialty} style={styles.arrowButton}>
-          <Text style={styles.arrowText}>{'>'}</Text>
+          <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>{'>'}</Text>
         </TouchableOpacity>
       </View>
 
-      {patientsData.length > 0 ? (
+      {filteredDoctors.length > 0 ? (
         <View style={styles.table}>
           <View style={styles.tableRow}>
-            <Text style={styles.tableHeader}>الترتيب</Text>
             <Text style={styles.tableHeader}>الاسم</Text>
             <Text style={styles.tableHeader}>التخصص</Text>
+            <Text style={styles.tableHeader}>أوقات التواجد</Text>
           </View>
-          {patientsData.map((patient: Patient, index: number) => (
-            <View key={String(patient.id)} style={styles.tableRow}>
-              <Text style={styles.tableCell}>{index + 1}</Text>
-              <Text style={styles.tableCell}>{String(patient.name || '')}</Text>
-              <Text style={styles.tableCell}>{String(patient.specialty || '')}</Text>
+          {filteredDoctors.map((doctor: Doctor) => (
+            <View key={String(doctor.id)} style={styles.tableRow}>
+              <Text style={styles.tableCell}>{String(doctor.name || '')}</Text>
+              <Text style={styles.tableCell}>{String(doctor.specialty || '')}</Text>
+              <Text style={styles.tableCell}>{String(doctor.value || '')}</Text>
             </View>
           ))}
         </View>
       ) : (
-        <Text style={styles.noCasesText}>لا توجد حالات لهذه التخصص.</Text>
+        <Text style={styles.noCasesText}>لا توجد بيانات أطباء لعرضها.</Text>
       )}
 
       <View style={styles.buttonContainer}>
@@ -125,14 +148,14 @@ export default function CasesScreen() {
 const styles = StyleSheet.create({
   screenContainer: {
     flexGrow: 1,
-    justifyContent: 'flex-start', // Changed to flex-start to accommodate the top bar
+    justifyContent: 'flex-start',
     alignItems: 'center',
     padding: 20,
-    paddingTop: 50, // Add padding to the top to give space for the bar
+    paddingTop: 50,
   },
   specialtyBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between', // Changed to space-between
+    justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
     paddingVertical: 15,
@@ -146,51 +169,33 @@ const styles = StyleSheet.create({
   },
   arrowText: {
     fontSize: 30,
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
     color: '#333333',
   },
   specialtyText: {
     fontSize: 32,
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
     color: '#333333',
     textAlign: 'center',
-    flex: 1, // Allow text to take available space
-  },
-  input: {
-    borderColor: 'gray',
-    borderWidth: 2,
-    marginBottom: 20,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    minWidth: 200,
-    fontFamily: 'ArefRuqaa-Regular',
-    fontSize: 36,
+    flex: 1,
   },
   buttonContainer: {
     width: 170,
     marginVertical: 10,
-    transitionProperty: 'all',
-    transitionDelay: '0.0s',
-    transitionDuration: '0.5s',
-    transitionTimingFunction: 'ease',
   },
   button: {
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
     alignItems: 'center',
-    transitionProperty: 'all',
-    transitionDelay: '0.0s',
-    transitionDuration: '0.5s',
-    transitionTimingFunction: 'ease',
   },
   buttonText: {
     color: 'white',
-    fontSize: 30,
-    fontFamily: 'ArefRuqaa-Regular',
+    fontSize: 24,
+    fontFamily: 'SegoeUI',
   },
   table: {
-    minWidth: '100%',
+    width: '100%',
     borderWidth: 2,
     borderColor: '#ccc',
     marginBottom: 20,
@@ -206,24 +211,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     backgroundColor: '#f2f2f2',
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
   },
   tableCell: {
     flex: 1,
     padding: 10,
     textAlign: 'center',
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
   },
   noCasesText: {
     fontSize: 28,
     padding: 10,
     textAlign: 'center',
-    fontFamily: 'ArefRuqaa-Regular',
-  },
-  tableButton: {
-    flex: 1,
-    backgroundColor: '#d93025',
-    paddingVertical: 5,
-    margin: 5,
+    fontFamily: 'SegoeUI',
   },
 });

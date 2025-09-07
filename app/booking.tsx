@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 
@@ -21,51 +21,54 @@ if (!firebase.apps.length) {
 
 const database = firebase.database();
 
-export const rawSpecialties = [
-  'الأسنان',
-  'الجلدية',
-  'الأطفال',
-  'النساء والتوليد',
-  'الجراحة',
-  'الأنف والأذن والحنجرة',
-  'العلاج الطبيعي',
-];
-
-const specialties = rawSpecialties.map(s => ({ label: s, value: s }));
-
 export default function BookingScreen() {
   const router = useRouter();
   const [patientName, setPatientName] = useState('');
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(specialties[0].value);
-  const [items, setItems] = useState(specialties);
+  const [value, setValue] = useState(null);
+  const [items, setItems] = useState<{label: string, value: string}[]>([]);
+
+  useEffect(() => {
+      database.ref('/specialties').once('value')
+        .then(snapshot => {
+            const specialtiesData = snapshot.val() || {};
+            const loadedSpecialties = Object.values(specialtiesData).map((s: any) => ({label: s, value: s}));
+            setItems(loadedSpecialties);
+            if (loadedSpecialties.length > 0) {
+                setValue(loadedSpecialties[0].value);
+            }
+        })
+        .catch(error => {
+            Alert.alert('Error', 'Could not fetch specialties.')
+        })
+  }, [])
 
   const addPatient = () => {
-    console.log('addPatient called');
     if (patientName && value) {
       const now = new Date();
-      const startOfYear = new Date(now.getFullYear(), 0, 0);
-      const timeSinceYearStartMilliseconds = now.getTime() - startOfYear.getTime();
-      const timeSinceYearStart = Math.round(timeSinceYearStartMilliseconds / 1000);
-      const year = now.getFullYear();
-      const patientId = `${year}${timeSinceYearStart}`;
-      const newPatientRef = database.ref(`/patients/${patientId}`);
-      newPatientRef.set({
-        name: patientName,
-        specialty: value,
-        time: firebase.database.ServerValue.TIMESTAMP,
-      })
-        .then(() => {
-          console.log('Patient added successfully!');
-          Alert.alert('Success', 'Patient added successfully!');
-          setPatientName('');
-          setValue(specialties[0].value);
-          router.push('/');
-        })
-        .catch((error) => {
-          console.error('Error adding patient:', error.message);
-          Alert.alert('Error', 'Error adding patient: ' + error.message);
+      const newPatientRef = database.ref(`/patients/${now.getTime()}`);
+
+      database.ref('/patients').orderByChild('priority').limitToLast(1).once('value')
+        .then(snapshot => {
+          let nextPriority = 1; 
+          if (snapshot.val()) {
+            const lastPatient = Object.values(snapshot.val())[0];
+            nextPriority = (lastPatient as any).priority + 1;
+          }
+
+          newPatientRef.set({
+            name: patientName,
+            specialty: value,
+            priority: nextPriority,
+            time: now.getTime(),
+          })
+            .then(() => {
+              Alert.alert('Success', 'Patient added successfully!');
+              setPatientName('');
+              router.push('/');
+            })
         });
+
     } else {
       Alert.alert('Error', 'Please enter patient name and select a specialty.');
     }
@@ -91,12 +94,12 @@ export default function BookingScreen() {
         containerStyle={styles.dropdownContainer}
         textStyle={styles.dropdownText}
         labelStyle={styles.dropdownLabel}
-        dropDownContainerStyle={[styles.dropdownMenuContainer, { maxHeight: 200 }]} // Added maxHeight
+        dropDownContainerStyle={[styles.dropdownMenuContainer, { maxHeight: 200 }]} 
         selectedItemLabelStyle={styles.dropdownSelectedItemLabel}
         placeholder="اختر التخصص"
         zIndex={3000}
         zIndexInverse={1000}
-        listMode="SCROLLVIEW" // Explicitly set listMode to SCROLLVIEW
+        listMode="SCROLLVIEW" 
       />
       <View style={styles.buttonContainer}>
         <TouchableOpacity
@@ -119,7 +122,7 @@ export default function BookingScreen() {
 
 const styles = StyleSheet.create({
   screenContainer: {
-    flex: 1, // Changed flexGrow to flex to ensure it takes up available space
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -131,14 +134,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 10,
     minWidth: 200,
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
     fontSize: 36,
     backgroundColor: '#ffffff',
   },
   dropdownContainer: {
     width: 200,
     marginBottom: 20,
-    // Removed zIndex from here as it's now handled by the DropDownPicker prop
   },
   dropdownPicker: {
     borderColor: 'gray',
@@ -149,20 +151,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   dropdownText: {
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
     fontSize: 20,
     color: '#333333',
     textAlign: 'left',
 
   },
   dropdownLabel: {
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
     fontSize: 30,
     color: '#333333',
     textAlign: 'left',
   },
   dropdownSelectedItemLabel: {
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
     fontSize: 20,
     color: '#333333',
   },
@@ -193,7 +195,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontSize: 30,
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
   },
   table: {
     minWidth: '100%',
@@ -212,19 +214,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     backgroundColor: '#f2f2f2',
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
   },
   tableCell: {
     flex: 1,
     padding: 10,
     textAlign: 'center',
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
   },
   noCasesText: {
     fontSize: 28,
     padding: 10,
     textAlign: 'center',
-    fontFamily: 'ArefRuqaa-Regular',
+    fontFamily: 'SegoeUI',
   },
   tableButton: {
     flex: 1,
