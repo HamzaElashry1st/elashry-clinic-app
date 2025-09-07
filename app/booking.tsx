@@ -45,33 +45,48 @@ export default function BookingScreen() {
 
   const addPatient = () => {
     if (patientName && value) {
-      const now = new Date();
-      const newPatientRef = database.ref(`/patients/${now.getTime()}`);
+      if (patientName.length >= 8 && patientName.split(' ').length - 1 >= 2) {
+        const now = new Date();
+        const newPatientRef = database.ref(`/patients/${now.getTime()}`);
 
-      database.ref('/patients').orderByChild('priority').limitToLast(1).once('value')
-        .then(snapshot => {
-          let nextPriority = 1; 
-          if (snapshot.val()) {
-            const lastPatient = Object.values(snapshot.val())[0];
-            nextPriority = (lastPatient as any).priority + 1;
-          }
+        database.ref('/patients').orderByChild('priority').limitToLast(1).once('value')
+          .then(snapshot => {
+            let nextPriority = 1; 
+            if (snapshot.val()) {
+              const lastPatient = Object.values(snapshot.val())[0];
+              nextPriority = (lastPatient as any).priority + 1;
+            }
 
-          newPatientRef.set({
-            name: patientName,
-            specialty: value,
-            priority: nextPriority,
-            time: now.getTime(),
-          })
-            .then(() => {
-              Alert.alert('Success', 'Patient added successfully!');
-              setPatientName('');
-              router.push('/');
+            newPatientRef.set({
+              name: patientName,
+              specialty: value,
+              priority: nextPriority,
+              time: now.getTime(),
             })
-        });
+              .then(() => {
+                Alert.alert('Success', 'Patient added successfully!');
+                setPatientName('');
+                router.push('/');
+              })
+          });
+      } else {
+        Alert.alert('Error', 'يجب إدخال الاسم ثلاثي');
+      }
 
     } else {
       Alert.alert('Error', 'Please enter patient name and select a specialty.');
     }
+  };
+
+  const handleNameChange = (text: string) => {
+    const arabicRegex = new RegExp(/^[\u0621-\u064A\s]+$/);
+    let validText = '';
+    for (let i = 0; i < text.length; i++) {
+      if (arabicRegex.test(text[i])) {
+        validText += text[i];
+      }
+    }
+    setPatientName(validText);
   };
 
   return (
@@ -81,7 +96,7 @@ export default function BookingScreen() {
         placeholder="اسم الحالة"
         placeholderTextColor="#333333"
         value={patientName}
-        onChangeText={setPatientName}
+        onChangeText={handleNameChange}
       />
       <DropDownPicker
         open={open}
