@@ -104,12 +104,13 @@ export default function DoctorsScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screenContainer}>
       <View style={styles.specialtyBar}>
-        <TouchableOpacity onPress={goToPreviousSpecialty} style={styles.arrowButton}>
-          <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>{'<'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.specialtyText}>{currentSpecialty}</Text>
+        <View>
+            <Text style={styles.label}>التخصص</Text>
+            <Text style={styles.specialtyText}>{currentSpecialty}</Text>
+        </View>
         <TouchableOpacity onPress={goToNextSpecialty} style={styles.arrowButton}>
-          <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>{'>'}</Text>
+            <Text style={styles.label}>التخصص التالي</Text>
+            <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>{'>'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -166,6 +167,7 @@ const styles = StyleSheet.create({
   arrowButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
+    alignItems: 'center',
   },
   arrowText: {
     fontSize: 30,
@@ -178,6 +180,13 @@ const styles = StyleSheet.create({
     color: '#333333',
     textAlign: 'center',
     flex: 1,
+  },
+  label: {
+      fontSize: 16,
+      fontFamily: 'SegoeUI',
+      color: '#666666',
+      textAlign: 'center',
+      marginBottom: 5,
   },
   buttonContainer: {
     width: 170,

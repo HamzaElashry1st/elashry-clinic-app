@@ -80,11 +80,12 @@ export default function CasesScreen() {
     return (
         <ScrollView contentContainerStyle={styles.screenContainer}>
             <View style={styles.specialtyBar}>
-                <TouchableOpacity onPress={goToPreviousSpecialty} style={styles.arrowButton}>
-                    <Text style={styles.arrowText}>&lt;</Text>
-                </TouchableOpacity>
-                <Text style={styles.specialtyText}>{currentSpecialty}</Text>
+                <View>
+                    <Text style={styles.label}>التخصص</Text>
+                    <Text style={styles.specialtyText}>{currentSpecialty}</Text>
+                </View>
                 <TouchableOpacity onPress={goToNextSpecialty} style={styles.arrowButton}>
+                    <Text style={styles.label}>التخصص التالي</Text>
                     <Text style={styles.arrowText}>&gt;</Text>
                 </TouchableOpacity>
             </View>
@@ -94,7 +95,7 @@ export default function CasesScreen() {
                     <View style={styles.tableRow}>
                         <Text style={styles.tableHeader}>الاسم</Text>
                         <Text style={styles.tableHeader}>التخصص</Text>
-                        <Text style={styles.tableHeader}>الاولويه</Text>
+                        <Text style={styles.tableHeader}>الترتيب</Text>
                     </View>
                     {patientsData.map((patient, index) => (
                         <View key={patient.id} style={styles.tableRow}>
@@ -138,6 +139,7 @@ const styles = StyleSheet.create({
     arrowButton: {
         paddingHorizontal: 20,
         paddingVertical: 10,
+        alignItems: 'center',
     },
     arrowText: {
         fontSize: 30,
@@ -150,6 +152,13 @@ const styles = StyleSheet.create({
         color: '#333333',
         textAlign: 'center',
         flex: 1,
+    },
+    label: {
+        fontSize: 16,
+        fontFamily: 'SegoeUI',
+        color: '#666666',
+        textAlign: 'center',
+        marginBottom: 5,
     },
     buttonContainer: {
         width: 170,
@@ -192,12 +201,14 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         backgroundColor: '#f2f2f2',
         fontFamily: 'SegoeUI',
+        fontSize: 22,
     },
     tableCell: {
         flex: 1,
         padding: 10,
         textAlign: 'center',
         fontFamily: 'SegoeUI',
+        fontSize: 22,
     },
     noCasesText: {
         fontSize: 28,

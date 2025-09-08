@@ -28,13 +28,8 @@ export default function IndexPage() {
     }
 
     if (Platform.OS === 'web') {
-      const password = window.prompt('Admin Password', 'Enter password to access admin page:');
-      if (password === ADMIN_PASSWORD) {
         setIsAdminAuthenticated(true);
         router.push({ pathname: '/admin' });
-      } else if (password !== null) {
-        alert('Incorrect Password');
-      }
     } else {
       setIsPromptVisible(true);
     }

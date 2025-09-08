@@ -2,8 +2,10 @@ import { useRouter } from 'expo-router';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import DropDownPicker from 'react-native-dropdown-picker';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const firebaseConfig = {
     apiKey: "AIzaSyB1bm_0TI5WytMlmP3IfZM1zhqDpvLBPn4",
@@ -70,6 +72,23 @@ export default function AdminScreen() {
             fetchSpecialties();
         }
     }, [activeTab, currentSpecialtyIndex]);
+
+    useEffect(() => {
+        if (activeTab === 'doctors') {
+            if (currentDoctorViewIndex === 0) {
+                setNewDoctorName('');
+                setNewDoctorValue('');
+                setSelectedDoctorSpecialty(null);
+            } else {
+                const selectedDoctor = doctorsData[currentDoctorViewIndex - 1];
+                if (selectedDoctor) {
+                    setNewDoctorName(selectedDoctor.name);
+                    setNewDoctorValue(selectedDoctor.value);
+                    setSelectedDoctorSpecialty(selectedDoctor.specialty);
+                }
+            }
+        }
+    }, [currentDoctorViewIndex, doctorsData, activeTab]);
 
     const fetchSpecialties = () => {
         database.ref('/specialties').once('value')
@@ -189,67 +208,59 @@ export default function AdminScreen() {
             })
     };
 
-   const updatePatientPriority = async (patientId: string, direction: number) => {
-    try {
-        if (!patientId) {
-            Alert.alert('Error', 'Patient ID is undefined.');
-            return;
-        }
-
-        const patientRef = database.ref('/patients/' + patientId);
-        const patientSnapshot = await patientRef.once('value');
-        const patient = patientSnapshot.val() as Patient;
-
-        if (!patient) {
-            Alert.alert('Error', 'Patient not found.');
-            return;
-        }
-
-        const currentPriority = patient.priority;
-        const targetPriority = currentPriority + direction;
-
-        const patientsRef = database.ref('/patients');
-        // Fetch all patients of the same specialty
-        const snapshot = await patientsRef
-            .orderByChild('specialty')
-            .equalTo(patient.specialty)
-            .once('value');
-
-        if (snapshot.exists()) {
-            const patients: { [key: string]: Patient } = snapshot.val();
-            let swapPatientId: string | null = null;
-
-            // Find the patient with the target priority
-            for (const patientKey in patients) {
-                if (patients[patientKey].priority === targetPriority) {
-                    swapPatientId = patientKey;
-                    break;
-                }
+    const onDragEnd = async ({ data }: { data: Patient[] }) => {
+        setPatientsData(data);
+        const updates: { [key: string]: number } = {};
+        data.forEach((patient, index) => {
+            if (patient.priority !== index + 1) {
+                updates[patient.id] = index + 1;
             }
+        });
 
-            if (swapPatientId) {
-                const swapPatientRef = database.ref('/patients/' + swapPatientId);
-                const swapPatientSnapshot = await swapPatientRef.once('value');
-                const swapPatient = swapPatientSnapshot.val() as Patient;
-
-                if (swapPatient) {
-                    await database.ref('/patients/' + patientId).update({ priority: swapPatient.priority });
-                    await database.ref('/patients/' + swapPatientId).update({ priority: currentPriority });
-                    fetchPatients();
-                } else {
-                    Alert.alert('Error', 'Swap patient data not found.');
-                }
-            } else {
-                Alert.alert('Error', 'No patient found with the target priority.');
+        if (Object.keys(updates).length > 0) {
+            const firebaseUpdates: { [key: string]: any } = {};
+            Object.keys(updates).forEach(patientId => {
+                firebaseUpdates['/patients/' + patientId + '/priority'] = updates[patientId];
+            });
+            try {
+                await database.ref().update(firebaseUpdates);
+                fetchPatients();
+            } catch (error: any) {
+                Alert.alert('Error', 'Error updating priorities: ' + error.message);
             }
-        } else {
-            Alert.alert('Error', 'No patients found for this specialty.');
         }
+    };
 
-    } catch (error: any) {
-        Alert.alert('Error', 'Error updating patient priority: ' + error.message);
-    }
-};
+    const renderItem = ({ item, drag, isActive }: RenderItemParams<Patient>) => {
+        return (
+            <TouchableOpacity
+                onLongPress={drag}
+                delayLongPress={750}
+                disabled={isActive}
+                style={[
+                    styles.tableRow,
+                    {
+                        backgroundColor: isActive ? '#e0e0e0' : 'white',
+                        borderBottomWidth: 1,
+                        borderColor: '#ccc',
+                        elevation: isActive ? 5 : 0,
+                    },
+                ]}
+            >
+                <Text style={styles.tableCell}>{item.name || ''}</Text>
+                <Text style={styles.tableCell}>{item.specialty || ''}</Text>
+                <View style={styles.actionsCell}>
+                    <TouchableOpacity
+                        activeOpacity={0.6}
+                        style={[styles.button, styles.tableButton]}
+                        onPress={() => removePatient(item.id)}
+                    >
+                        <Text style={styles.buttonText}>حذف</Text>
+                    </TouchableOpacity>
+                </View>
+            </TouchableOpacity>
+        );
+    };
 
     const fetchDoctors = () => {
         database.ref('/doctors').once('value')
@@ -383,214 +394,218 @@ export default function AdminScreen() {
         }
     };
 
-    return (
-        <ScrollView contentContainerStyle={styles.screenContainer}>
-            <View style={styles.tabContainer}>
-                <TouchableOpacity
-                    style={[styles.tabButton, activeTab === 'cases' && styles.activeTabButton]}
-                    onPress={() => setActiveTab('cases')}
-                >
-                    <Text style={[styles.tabButtonText, activeTab === 'cases' && styles.activeTabButtonText]}>الحالات</Text>
+    const renderCases = () => (
+        <>
+            <View style={styles.specialtyBar}>
+                <TouchableOpacity onPress={goToPreviousSpecialty} style={styles.arrowButton}>
+                    <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>&lt;</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tabButton, activeTab === 'doctors' && styles.activeTabButton]}
-                    onPress={() => setActiveTab('doctors')}
-                >
-                    <Text style={[styles.tabButtonText, activeTab === 'doctors' && styles.activeTabButtonText]}>الأطباء</Text>
-                </TouchableOpacity>
-                 <TouchableOpacity
-                    style={[styles.tabButton, activeTab === 'specialties' && styles.activeTabButton]}
-                    onPress={() => setActiveTab('specialties')}
-                >
-                    <Text style={[styles.tabButtonText, activeTab === 'specialties' && styles.activeTabButtonText]}>التخصصات</Text>
+                <Text style={styles.specialtyText}>{currentSpecialty}</Text>
+                <TouchableOpacity onPress={goToNextSpecialty} style={styles.arrowButton}>
+                    <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>&gt;</Text>
                 </TouchableOpacity>
             </View>
 
-            {activeTab === 'cases' && (
-                <>
-                    <View style={styles.specialtyBar}>
-                        <TouchableOpacity onPress={goToPreviousSpecialty} style={styles.arrowButton}>
-                            <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>&lt;</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.specialtyText}>{currentSpecialty}</Text>
-                        <TouchableOpacity onPress={goToNextSpecialty} style={styles.arrowButton}>
-                            <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>&gt;</Text>
+            {patientsData.length > 0 ? (
+                <View style={styles.table}>
+                    <View style={styles.tableRow}>
+                        <Text style={styles.tableHeader}>الاسم</Text>
+                        <Text style={styles.tableHeader}>التخصص</Text>
+                        <Text style={styles.tableHeader}></Text>
+                    </View>
+                    {currentSpecialty !== 'جميع التخصصات' ? (
+                        <DraggableFlatList
+                            data={patientsData}
+                            renderItem={renderItem}
+                            keyExtractor={(item) => item.id}
+                            onDragEnd={onDragEnd}
+                            style={{ width: '100%' }}
+                        />
+                    ) : (
+                        patientsData.map((patient: Patient) => (
+                            <View key={String(patient.id)} style={styles.tableRow}>
+                                <Text style={styles.tableCell}>{String(patient.name || '')}</Text>
+                                <Text style={styles.tableCell}>{String(patient.specialty || '')}</Text>
+                                <View style={styles.actionsCell}>
+                                    <TouchableOpacity
+                                        activeOpacity={0.6}
+                                        style={[styles.button, styles.tableButton]}
+                                        onPress={() => removePatient(patient.id)}
+                                    >
+                                        <Text style={styles.buttonText}>حذف</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        ))
+                    )}
+                </View>
+            ) : (
+                <Text style={styles.noCasesText}>لا توجد حالات لهذه التخصص.</Text>
+            )}
+        </>
+    );
+
+    const renderSpecialties = () => (
+        <View style={styles.doctorManagementContainer}>
+            <TextInput
+                style={styles.input}
+                placeholder="اسم التخصص الجديد"
+                value={newSpecialty}
+                onChangeText={setNewSpecialty}
+                multiline={false}
+            />
+            <TouchableOpacity
+                activeOpacity={0.6}
+                style={[styles.button, { backgroundColor: '#4CAF50', width: '100%', marginBottom: 20 }]}
+                onPress={addSpecialty}
+            >
+                <Text style={styles.buttonText}>إضافة تخصص</Text>
+            </TouchableOpacity>
+            {specialtiesData.map((spec) => (
+                <View key={spec.id} style={styles.tableRow}>
+                    <Text style={styles.tableCell}>{spec.name}</Text>
+                    <View style={styles.actionsCell}>
+                        <TouchableOpacity
+                            activeOpacity={0.6}
+                            style={[styles.button, styles.tableButton]}
+                            onPress={() => removeSpecialty(spec.id)}>
+                            <Text style={styles.buttonText}>حذف</Text>
                         </TouchableOpacity>
                     </View>
+                </View>
+            ))}
+        </View>
+    );
 
-                    {patientsData.length > 0 ? (
-                        <View style={styles.table}>
-                            <View style={styles.tableRow}>
-                                <Text style={styles.tableHeader}>الاسم</Text>
-                                <Text style={styles.tableHeader}>التخصص</Text>
-                                <Text style={styles.tableHeader}>تعديل الاولوية</Text>
-                            </View>
-                            {patientsData.map((patient: Patient, index) => (
-                                <View key={String(patient.id)} style={styles.tableRow}>
-                                    <Text style={styles.tableCell}>{String(patient.name || '')}</Text>
-                                    <Text style={styles.tableCell}>{String(patient.specialty || '')}</Text>
-                                      <View style={styles.actionsCell}>
-                                         {currentSpecialty !== 'جميع التخصصات' && (
-                                            <>
-                                                 <TouchableOpacity onPress={() => updatePatientPriority(patient.id,  -1)}>
-                                                      <Text style={styles.priorityButton}>▲</Text>
-                                                  </TouchableOpacity>
-                                                 <TouchableOpacity onPress={() => updatePatientPriority(patient.id, 1)}>
-                                                      <Text style={styles.priorityButton}>▼</Text>
-                                                  </TouchableOpacity>
-                                            </>
-                                         )}
-                                    </View>
-                                    <View style={styles.actionsCell}>
-                                        <TouchableOpacity
-                                            activeOpacity={0.6}
-                                            style={[styles.button, styles.tableButton]}
-                                            onPress={() => removePatient(patient.id)}
-                                        >
-                                            <Text style={styles.buttonText}>حذف</Text>
-                                        </TouchableOpacity>
+    const renderDoctors = () => (
+        <View style={styles.doctorManagementContainer}>
+            <View style={styles.specialtyBar}>
+                <TouchableOpacity onPress={goToPreviousDoctor} style={styles.arrowButton}>
+                    <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>&lt;</Text>
+                </TouchableOpacity>
+                <Text style={styles.specialtyText}>{currentDoctorDisplayName()}</Text>
+                <TouchableOpacity onPress={goToNextDoctor} style={styles.arrowButton}>
+                    <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>&gt;</Text>
+                </TouchableOpacity>
+            </View>
 
-                                    </View>
-                                </View>
-                            ))}
-                        </View>
-                    ) : (
-                        <Text style={styles.noCasesText}>لا توجد حالات لهذه التخصص.</Text>
-                    )}
-                </>
-            )}
-            
-            {activeTab === 'specialties' && (
-                <View style={styles.doctorManagementContainer}>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="اسم التخصص الجديد"
-                        value={newSpecialty}
-                        onChangeText={setNewSpecialty}
-                        multiline={false}
-                    />
+            <TextInput
+                style={styles.input}
+                placeholder="اسم الدكتور"
+                value={newDoctorName}
+                onChangeText={setNewDoctorName}
+                multiline={false}
+            />
+
+            <DropDownPicker
+                open={openSpecialtyDropdown}
+                value={selectedDoctorSpecialty}
+                items={doctorSpecialtyItems}
+                setOpen={setOpenSpecialtyDropdown}
+                setValue={setSelectedDoctorSpecialty}
+                setItems={setDoctorSpecialtyItems}
+                style={styles.dropdownPicker}
+                containerStyle={styles.dropdownContainer}
+                textStyle={styles.dropdownText}
+                labelStyle={styles.dropdownLabel}
+                dropDownContainerStyle={[styles.dropdownMenuContainer, { maxHeight: 200 }]}
+                selectedItemLabelStyle={styles.dropdownSelectedItemLabel}
+                placeholder="اختر التخصص"
+                listMode="SCROLLVIEW"
+                zIndex={3000}
+                zIndexInverse={1000}
+            />
+
+            <TextInput
+                style={styles.input}
+                placeholder="أوقات تواجد الدكتور"
+                value={newDoctorValue}
+                onChangeText={setNewDoctorValue}
+                multiline={true}
+                numberOfLines={5}
+            />
+
+            <View style={styles.buttonRow}>
+                {currentDoctorViewIndex === 0 ? (
                     <TouchableOpacity
                         activeOpacity={0.6}
-                        style={[styles.button, { backgroundColor: '#4CAF50', width: '100%', marginBottom: 20 }]}
-                        onPress={addSpecialty}
+                        style={[styles.button, { backgroundColor: '#4CAF50', flex: 1, marginHorizontal: 5 }]}
+                        onPress={addDoctor}
                     >
-                        <Text style={styles.buttonText}>إضافة تخصص</Text>
+                        <Text style={styles.buttonText}>إضافة طبيب جديد</Text>
                     </TouchableOpacity>
-                    {specialtiesData.map((spec) => (
-                        <View key={spec.id} style={styles.tableRow}>
-                            <Text style={styles.tableCell}>{spec.name}</Text>
-                            <View style={styles.actionsCell}>
-                                <TouchableOpacity
-                                    activeOpacity={0.6}
-                                    style={[styles.button, styles.tableButton]}
-                                    onPress={() => removeSpecialty(spec.id)}>
-                                    <Text style={styles.buttonText}>حذف</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    ))}
-                </View>
-            )}
-
-
-             <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                    activeOpacity={0.6}
-                    style={[styles.button, { backgroundColor: '#5f6368' }]}
-                    onPress={() => router.push('/')}
-                >
-                    <Text style={styles.buttonText}>عودة</Text>
-                </TouchableOpacity>
+                ) : (
+                    <>
+                        <TouchableOpacity
+                            activeOpacity={0.6}
+                            style={[styles.button, { backgroundColor: '#2196F3', flex: 1, marginHorizontal: 5 }]}
+                            onPress={updateDoctor}
+                        >
+                            <Text style={styles.buttonText}>تحديث الطبيب</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            activeOpacity={0.6}
+                            style={[styles.button, { backgroundColor: '#f44336', flex: 1, marginHorizontal: 5 }]}
+                            onPress={removeDoctor}
+                        >
+                            <Text style={styles.buttonText}>حذف الطبيب</Text>
+                        </TouchableOpacity>
+                    </>
+                )}
             </View>
 
-            {activeTab === 'doctors' && (
-                <View style={styles.doctorManagementContainer}>
-                    <View style={styles.specialtyBar}>
-                        <TouchableOpacity onPress={goToPreviousDoctor} style={styles.arrowButton}>
-                            <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>&lt;</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.specialtyText}>{currentDoctorDisplayName()}</Text>
-                        <TouchableOpacity onPress={goToNextDoctor} style={styles.arrowButton}>
-                            <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>&gt;</Text>
-                        </TouchableOpacity>
-                    </View>
+        </View>
+    );
 
-                    <TextInput
-                        style={styles.input}
-                        placeholder="اسم الدكتور"
-                        value={newDoctorName}
-                        onChangeText={setNewDoctorName}
-                        multiline={false}
-                    />
-
-                    <DropDownPicker
-                        open={openSpecialtyDropdown}
-                        value={selectedDoctorSpecialty}
-                        items={doctorSpecialtyItems}
-                        setOpen={setOpenSpecialtyDropdown}
-                        setValue={setSelectedDoctorSpecialty}
-                        setItems={setDoctorSpecialtyItems}
-                        style={styles.dropdownPicker}
-                        containerStyle={styles.dropdownContainer}
-                        textStyle={styles.dropdownText}
-                        labelStyle={styles.dropdownLabel}
-                        dropDownContainerStyle={[styles.dropdownMenuContainer, { maxHeight: 200 }]}
-                        selectedItemLabelStyle={styles.dropdownSelectedItemLabel}
-                        placeholder="اختر التخصص"
-                        listMode="SCROLLVIEW"
-                        zIndex={3000}
-                        zIndexInverse={1000}
-                    />
-
-                    <TextInput
-                        style={styles.input}
-                        placeholder="أوقات تواجد الدكتور"
-                        value={newDoctorValue}
-                        onChangeText={setNewDoctorValue}
-                        multiline={true}
-                        numberOfLines={5}
-                    />
-
-                    <View style={styles.buttonRow}>
-                        {currentDoctorViewIndex === 0 ? (
-                            <TouchableOpacity
-                                activeOpacity={0.6}
-                                style={[styles.button, { backgroundColor: '#4CAF50', flex: 1, marginHorizontal: 5 }]}
-                                onPress={addDoctor}
-                            >
-                                <Text style={styles.buttonText}>إضافة طبيب جديد</Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <>
-                                <TouchableOpacity
-                                    activeOpacity={0.6}
-                                    style={[styles.button, { backgroundColor: '#2196F3', flex: 1, marginHorizontal: 5 }]}
-                                    onPress={updateDoctor}
-                                >
-                                    <Text style={styles.buttonText}>تحديث الطبيب</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    activeOpacity={0.6}
-                                    style={[styles.button, { backgroundColor: '#f44336', flex: 1, marginHorizontal: 5 }]}
-                                    onPress={removeDoctor}
-                                >
-                                    <Text style={styles.buttonText}>حذف الطبيب</Text>
-                                </TouchableOpacity>
-                            </>
-                        )}
-                    </View>
-
+    return (
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <View style={styles.screenContainer}>
+                <View style={styles.tabContainer}>
+                    <TouchableOpacity
+                        style={[styles.tabButton, activeTab === 'cases' && styles.activeTabButton]}
+                        onPress={() => setActiveTab('cases')}
+                    >
+                        <Text style={[styles.tabButtonText, activeTab === 'cases' && styles.activeTabButtonText]}>الحالات</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.tabButton, activeTab === 'doctors' && styles.activeTabButton]}
+                        onPress={() => setActiveTab('doctors')}
+                    >
+                        <Text style={[styles.tabButtonText, activeTab === 'doctors' && styles.activeTabButtonText]}>الأطباء</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.tabButton, activeTab === 'specialties' && styles.activeTabButton]}
+                        onPress={() => setActiveTab('specialties')}
+                    >
+                        <Text style={[styles.tabButtonText, activeTab === 'specialties' && styles.activeTabButtonText]}>التخصصات</Text>
+                    </TouchableOpacity>
                 </View>
-            )}
 
-           
-        </ScrollView>
+                {activeTab === 'cases' && renderCases()}
+                {activeTab === 'doctors' && renderDoctors()}
+                {activeTab === 'specialties' && renderSpecialties()}
+
+                <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                        activeOpacity={0.6}
+                        style={[
+                            styles.button,
+                            { backgroundColor: '#5f6368' },
+                            activeTab === 'cases' && currentSpecialty !== 'جميع التخصصات' && { opacity: 0.8 }
+                        ]}
+                        onPress={() => router.push('/')}
+                    >
+                        <Text style={styles.buttonText}>عودة</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </GestureHandlerRootView>
     );
 }
 
 const styles = StyleSheet.create({
     screenContainer: {
-        flexGrow: 1,
+        flex: 1,
         justifyContent: 'flex-start',
         alignItems: 'center',
         padding: 20,
@@ -658,6 +673,7 @@ const styles = StyleSheet.create({
         width: '100%',
         textAlign: 'right',
         paddingVertical: 10,
+        color: '#404040',
     },
     buttonContainer: {
         width: 170,
@@ -685,9 +701,9 @@ const styles = StyleSheet.create({
     },
     table: {
         minWidth: '100%',
-        borderWidth: 2,
-        borderColor: '#ccc',
+        borderWidth: 0,
         marginBottom: 20,
+        flex: 1,
     },
     tableRow: {
         flexDirection: 'row',
@@ -701,6 +717,7 @@ const styles = StyleSheet.create({
     tableHeader: {
         flex: 1,
         padding: 10,
+        fontSize: 22,
         fontWeight: 'bold',
         textAlign: 'center',
         backgroundColor: '#f2f2f2',
@@ -709,6 +726,7 @@ const styles = StyleSheet.create({
     tableCell: {
         flex: 1,
         padding: 10,
+        fontSize: 22,
         textAlign: 'center',
         fontFamily: 'SegoeUI',
     },
