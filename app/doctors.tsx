@@ -28,8 +28,8 @@ interface Doctor {
 }
 
 interface Specialty {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 }
 
 export default function DoctorsScreen() {
@@ -37,29 +37,29 @@ export default function DoctorsScreen() {
   const [doctorsData, setDoctorsData] = useState<Doctor[]>([]);
   const [currentSpecialtyIndex, setCurrentSpecialtyIndex] = useState(0);
   const [specialtiesData, setSpecialtiesData] = useState<Specialty[]>([]);
-    const [specialties, setSpecialties] = useState<string[]>([]);
+  const [specialties, setSpecialties] = useState<string[]>([]);
   const currentSpecialty = specialties[currentSpecialtyIndex] || "جميع التخصصات";
 
-    useEffect(() => {
-        fetchSpecialties();
-    }, []);
+  useEffect(() => {
+    fetchSpecialties();
+  }, []);
 
-    const fetchSpecialties = () => {
-        database.ref('/specialties').once('value')
-            .then((snapshot) => {
-                const specialtiesData = snapshot.val() || {};
-                const loadedSpecialties: Specialty[] = Object.keys(specialtiesData).map(key => ({
-                    id: key,
-                    name: specialtiesData[key]
-                }));
-                setSpecialtiesData(loadedSpecialties);
-                const specialtyNames = loadedSpecialties.map(s => s.name);
-                setSpecialties([...specialtyNames, "جميع التخصصات"]);
-            })
-            .catch((error: any) => {
-                Alert.alert('Error', 'Error fetching specialties: ' + error.message);
-            });
-    };
+  const fetchSpecialties = () => {
+    database.ref('/specialties').once('value')
+      .then((snapshot) => {
+        const specialtiesData = snapshot.val() || {};
+        const loadedSpecialties: Specialty[] = Object.keys(specialtiesData).map(key => ({
+          id: key,
+          name: specialtiesData[key]
+        }));
+        setSpecialtiesData(loadedSpecialties);
+        const specialtyNames = loadedSpecialties.map(s => s.name);
+        setSpecialties(["جميع التخصصات", ...specialtyNames]);
+      })
+      .catch((error: any) => {
+        Alert.alert('Error', 'Error fetching specialties: ' + error.message);
+      });
+  };
 
   const fetchDoctors = () => {
     database.ref('/doctors').once('value')
@@ -104,14 +104,22 @@ export default function DoctorsScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screenContainer}>
       <View style={styles.specialtyBar}>
-        <View>
-            <Text style={styles.label}>التخصص</Text>
-            <Text style={styles.specialtyText}>{currentSpecialty}</Text>
+        <View style={styles.leftContainer}>
+          <TouchableOpacity onPress={goToPreviousSpecialty} style={styles.arrowButton}>
+            <Text style={styles.arrowLabel}>التخصص السابق</Text>
+            <Text style={styles.arrowText}>{'<'}</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={goToNextSpecialty} style={styles.arrowButton}>
-            <Text style={styles.label}>التخصص التالي</Text>
-            <Text style={[styles.arrowText, { fontWeight: 'bold' }]}>{'>'}</Text>
-        </TouchableOpacity>
+        <View style={styles.specialtyTextContainer}>
+          <Text style={styles.label}>التخصص</Text>
+          <Text style={styles.specialtyText}>{currentSpecialty}</Text>
+        </View>
+        <View style={styles.rightContainer}>
+          <TouchableOpacity onPress={goToNextSpecialty} style={styles.arrowButton}>
+            <Text style={styles.arrowLabel}>التخصص التالي</Text>
+            <Text style={styles.arrowText}>{'>'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {filteredDoctors.length > 0 ? (
@@ -157,36 +165,55 @@ const styles = StyleSheet.create({
   specialtyBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     width: '100%',
     paddingVertical: 15,
     backgroundColor: '#f0f0f0',
     marginBottom: 20,
     borderRadius: 10,
   },
+  leftContainer: {
+    flex: 1,
+    alignItems: 'flex-start',
+    paddingLeft: 10,
+  },
+  rightContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingRight: 10,
+  },
   arrowButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
     alignItems: 'center',
+  },
+  arrowLabel: {
+    fontSize: 16,
+    fontFamily: 'SegoeUI',
+    color: '#666666',
+    textAlign: 'center',
   },
   arrowText: {
     fontSize: 30,
     fontFamily: 'SegoeUI',
     color: '#333333',
+    fontWeight: 'bold',
+  },
+  specialtyTextContainer: {
+    flex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   specialtyText: {
     fontSize: 32,
     fontFamily: 'SegoeUI',
     color: '#333333',
     textAlign: 'center',
-    flex: 1,
   },
   label: {
-      fontSize: 16,
-      fontFamily: 'SegoeUI',
-      color: '#666666',
-      textAlign: 'center',
-      marginBottom: 5,
+    fontSize: 16,
+    fontFamily: 'SegoeUI',
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 5,
   },
   buttonContainer: {
     width: 170,

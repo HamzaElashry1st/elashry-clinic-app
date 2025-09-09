@@ -5,15 +5,14 @@ import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB1bm_0TI5WytMlmP3IfZM1zhqDpvLBPn4",
-  authDomain: "elashryclinic-22e84.firebaseapp.com",
-  databaseURL: "https://elashryclinic-22e84-default-rtdb.firebaseio.com",
-  projectId: "elashryclinic-22e84",
-  storageBucket: "elashryclinic-22e84.firebasestorage.app",
-  messagingSenderId: "94154446201",
-  appId: "1:94154446201:web:fca72a62bd6843f985cba8"
+    apiKey: "AIzaSyB1bm_0TI5WytMlmP3IfZM1zhqDpvLBPn4",
+    authDomain: "elashryclinic-22e84.firebaseapp.com",
+    databaseURL: "https://elashryclinic-22e84-default-rtdb.firebaseio.com",
+    projectId: "elashryclinic-22e84",
+    storageBucket: "elashryclinic-22e84.firebasestorage.app",
+    messagingSenderId: "94154446201",
+    appId: "1:94154446201:web:fca72a62bd6843f985cba8"
 };
-
 
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
@@ -35,17 +34,16 @@ export default function CasesScreen() {
     const [specialties, setSpecialties] = useState<string[]>([]);
     const currentSpecialty = specialties[currentSpecialtyIndex];
 
-
     useEffect(() => {
         database.ref('/specialties').once('value')
-        .then(snapshot => {
-            const specialtiesData = snapshot.val() || {};
-            const loadedSpecialties = Object.values(specialtiesData);
-            setSpecialties(loadedSpecialties as string[]);
-        })
-        .catch(error => {
-            Alert.alert('Error', 'Could not fetch specialties.')
-        })
+            .then(snapshot => {
+                const specialtiesData = snapshot.val() || {};
+                const loadedSpecialties = Object.values(specialtiesData);
+                setSpecialties(loadedSpecialties as string[]);
+            })
+            .catch(error => {
+                Alert.alert('Error', 'Could not fetch specialties.')
+            })
 
         const patientsRef = database.ref('/patients');
         patientsRef.on('value', (snapshot) => {
@@ -68,23 +66,27 @@ export default function CasesScreen() {
     }, [currentSpecialty]);
 
     const goToNextSpecialty = () => {
-        if(specialties.length === 0) return;
+        if (specialties.length === 0) return;
         setCurrentSpecialtyIndex(prevIndex => (prevIndex + 1) % specialties.length);
     };
 
     const goToPreviousSpecialty = () => {
-        if(specialties.length === 0) return;
+        if (specialties.length === 0) return;
         setCurrentSpecialtyIndex(prevIndex => (prevIndex - 1 + specialties.length) % specialties.length);
     };
 
     return (
         <ScrollView contentContainerStyle={styles.screenContainer}>
             <View style={styles.specialtyBar}>
-                <View>
+                <TouchableOpacity onPress={goToPreviousSpecialty} style={[styles.arrowButton, { flex: 1, alignItems: 'flex-start' }]}>
+                <Text style={styles.label}>التخصص السابق</Text>
+                    <Text style={styles.arrowText}>&lt;</Text>
+                </TouchableOpacity>
+                <View style={[styles.specialtyInfo, { flex: 2, alignItems: 'center' }]}>
                     <Text style={styles.label}>التخصص</Text>
                     <Text style={styles.specialtyText}>{currentSpecialty}</Text>
                 </View>
-                <TouchableOpacity onPress={goToNextSpecialty} style={styles.arrowButton}>
+                <TouchableOpacity onPress={goToNextSpecialty} style={[styles.arrowButton, { flex: 1, alignItems: 'flex-end' }]}>
                     <Text style={styles.label}>التخصص التالي</Text>
                     <Text style={styles.arrowText}>&gt;</Text>
                 </TouchableOpacity>
@@ -135,23 +137,27 @@ const styles = StyleSheet.create({
         backgroundColor: '#f0f0f0',
         marginBottom: 20,
         borderRadius: 10,
+        paddingHorizontal: 10, // Add padding here
     },
     arrowButton: {
-        paddingHorizontal: 20,
+        // paddingHorizontal: 20,  // Removed to allow flex
         paddingVertical: 10,
-        alignItems: 'center',
     },
     arrowText: {
         fontSize: 30,
         fontFamily: 'SegoeUI',
         color: '#333333',
     },
+    specialtyInfo: {
+        // flex: 1, // Removed to allow flex on the arrow buttons
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     specialtyText: {
         fontSize: 32,
         fontFamily: 'SegoeUI',
         color: '#333333',
         textAlign: 'center',
-        flex: 1,
     },
     label: {
         fontSize: 16,

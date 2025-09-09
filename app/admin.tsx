@@ -6,6 +6,7 @@ import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'reac
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import PromptModal from '../components/PromptModal';
 
 const firebaseConfig = {
     apiKey: "AIzaSyB1bm_0TI5WytMlmP3IfZM1zhqDpvLBPn4",
@@ -47,7 +48,7 @@ export default function AdminScreen() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'cases' | 'doctors' | 'specialties'>('cases');
     const [patientsData, setPatientsData] = useState<Patient[]>([]);
-    const [currentSpecialtyIndex, setCurrentSpecialtyIndex] = useState(0);
+    const [currentSpecialtyIndex, setCurrentSpecialtyIndex] = useState(-1);
     const [specialties, setSpecialties] = useState<string[]>([]);
     const currentSpecialty = specialties[currentSpecialtyIndex] || "جميع التخصصات";
     const [doctorsData, setDoctorsData] = useState<Doctor[]>([]);
@@ -59,6 +60,7 @@ export default function AdminScreen() {
     const [doctorSpecialtyItems, setDoctorSpecialtyItems] = useState<{label: string, value: string}[]>([]);
     const [newSpecialty, setNewSpecialty] = useState('');
     const [specialtiesData, setSpecialtiesData] = useState<Specialty[]>([]);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     useEffect(() => {
         autoDeleteOldEntries();
@@ -136,7 +138,7 @@ export default function AdminScreen() {
             });
     };
 
-   const autoDeleteOldEntries = () => {
+    const autoDeleteOldEntries = () => {
         const timeToRemove = Date.now() - (3 * 24 * 60 * 60 * 1000);
         database.ref('/patients').once('value')
             .then((snapshot) => {
@@ -151,30 +153,30 @@ export default function AdminScreen() {
             })
     };
 
-  const fetchPatients = () => {
-    database
-      .ref('/patients')
-      .once('value')
-      .then((snapshot) => {
-        const patients = snapshot.val() || {};
-        let patientList: Patient[] = Object.keys(patients).map(key => ({
-            id: key,
-            ...patients[key]
-        }));
+    const fetchPatients = () => {
+        database
+            .ref('/patients')
+            .once('value')
+            .then((snapshot) => {
+                const patients = snapshot.val() || {};
+                let patientList: Patient[] = Object.keys(patients).map(key => ({
+                    id: key,
+                    ...patients[key]
+                }));
 
-        const filteredPatients = currentSpecialty === 'جميع التخصصات'
-            ? patientList
-            : patientList.filter((patient) => patient.specialty === currentSpecialty);
+                const filteredPatients = currentSpecialty === 'جميع التخصصات'
+                    ? patientList
+                    : patientList.filter((patient) => patient.specialty === currentSpecialty);
 
-          filteredPatients.sort((a, b) => a.priority - b.priority);
+                filteredPatients.sort((a, b) => a.priority - b.priority);
 
-          setPatientsData(filteredPatients);
-      })
-      .catch((error: any) => {
-        Alert.alert('Error', 'Error fetching patients: ' + (error as Error).message);
-        setPatientsData([]);
-      });
-  };
+                setPatientsData(filteredPatients);
+            })
+            .catch((error: any) => {
+                Alert.alert('Error', 'Error fetching patients: ' + (error as Error).message);
+                setPatientsData([]);
+            });
+    };
 
     const removePatient = (patientId: string) => {
         if (patientId) {
@@ -235,7 +237,7 @@ export default function AdminScreen() {
         return (
             <TouchableOpacity
                 onLongPress={drag}
-                delayLongPress={750}
+                delayLongPress={300}
                 disabled={isActive}
                 style={[
                     styles.tableRow,
@@ -260,6 +262,21 @@ export default function AdminScreen() {
                 </View>
             </TouchableOpacity>
         );
+    };
+
+    const deleteAllPatients = async (password: string) => {
+        if (password === '1970') {
+            try {
+                await database.ref('/patients').remove();
+                Alert.alert('Success', 'All patients have been successfully deleted.');
+                fetchPatients();
+            } catch (error: any) {
+                Alert.alert('Error', 'Error deleting all patients: ' + error.message);
+            }
+        } else {
+            Alert.alert('Error', 'Incorrect password.');
+        }
+        setShowPasswordModal(false);
     };
 
     const fetchDoctors = () => {
@@ -408,10 +425,18 @@ export default function AdminScreen() {
 
             {patientsData.length > 0 ? (
                 <View style={styles.table}>
-                    <View style={styles.tableRow}>
+                    <View style={styles.tableHeaderRow}>
                         <Text style={styles.tableHeader}>الاسم</Text>
                         <Text style={styles.tableHeader}>التخصص</Text>
-                        <Text style={styles.tableHeader}></Text>
+                        <View style={styles.actionsCellHeader}>
+                            <TouchableOpacity
+                                activeOpacity={0.6}
+                                style={[styles.button, styles.tableButton]}
+                                onPress={() => setShowPasswordModal(true)}
+                            >
+                                <Text style={styles.buttonText}>حذف الكل</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                     {currentSpecialty !== 'جميع التخصصات' ? (
                         <DraggableFlatList
@@ -450,6 +475,7 @@ export default function AdminScreen() {
             <TextInput
                 style={styles.input}
                 placeholder="اسم التخصص الجديد"
+                placeholderTextColor="#666"
                 value={newSpecialty}
                 onChangeText={setNewSpecialty}
                 multiline={false}
@@ -492,6 +518,7 @@ export default function AdminScreen() {
             <TextInput
                 style={styles.input}
                 placeholder="اسم الدكتور"
+                placeholderTextColor="#666"
                 value={newDoctorName}
                 onChangeText={setNewDoctorName}
                 multiline={false}
@@ -519,6 +546,7 @@ export default function AdminScreen() {
             <TextInput
                 style={styles.input}
                 placeholder="أوقات تواجد الدكتور"
+                placeholderTextColor="#666"
                 value={newDoctorValue}
                 onChangeText={setNewDoctorValue}
                 multiline={true}
@@ -599,6 +627,14 @@ export default function AdminScreen() {
                     </TouchableOpacity>
                 </View>
             </View>
+            <PromptModal
+                visible={showPasswordModal}
+                title="تأكيد الحذف"
+                message="أدخل كلمة المرور لحذف جميع الحالات"
+                onCancel={() => setShowPasswordModal(false)}
+                onConfirm={deleteAllPatients}
+                secureTextEntry={true}
+            />
         </GestureHandlerRootView>
     );
 }
@@ -714,13 +750,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 5,
     },
+    tableHeaderRow: {
+        flexDirection: 'row',
+        borderBottomWidth: 2,
+        borderColor: '#ccc',
+        width: '100%',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 5,
+        backgroundColor: '#f2f2f2',
+    },
     tableHeader: {
         flex: 1,
         padding: 10,
         fontSize: 22,
         fontWeight: 'bold',
         textAlign: 'center',
-        backgroundColor: '#f2f2f2',
         fontFamily: 'SegoeUI',
     },
     tableCell: {
@@ -803,6 +848,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    actionsCellHeader: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        paddingRight: 10,
     },
     priorityButton: {
         fontSize: 24,
